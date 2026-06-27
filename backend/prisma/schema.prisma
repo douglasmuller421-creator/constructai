@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("MANAGER")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  projects  Project[]
+  logs      DailyLog[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      String   @default("PLANNING")
+  location    String
+  budget      Float    @default(0)
+  startDate   DateTime
+  endDate     DateTime?
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id])
+  costs       Cost[]
+  logs        DailyLog[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model Cost {
+  id          String   @id @default(cuid())
+  category    String   @default("OTHER")
+  description String
+  amount      Float
+  quantity    Float    @default(1)
+  unit        String?
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model DailyLog {
+  id        String   @id @default(cuid())
+  type      String   @default("GENERAL")
+  content   String
+  weather   String?
+  crewSize  Int?
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+model Subcontractor {
+  id                String   @id @default(cuid())
+  companyName       String
+  tradingName       String?
+  email             String?
+  phone             String?
+  city              String?
+  postcode          String?
+  tradeCategories   String
+  insuranceProvider String?
+  insuranceExpiry   DateTime?
+  status            String   @default("ACTIVE")
+  riskLevel         String   @default("LOW")
+  rating            Float    @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([status])
+}
+
+model SafetyChecklist {
+  id        String   @id @default(cuid())
+  name      String
+  items     String
+  status    String   @default("PENDING")
+  projectId String
+  dueDate   DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}

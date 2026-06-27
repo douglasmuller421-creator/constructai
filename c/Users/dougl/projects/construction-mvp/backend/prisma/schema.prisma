@@ -1,0 +1,177 @@
+// Prisma schema for Construction AI MVP
+// Phase 1: Core data model
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  MANAGER
+  WORKER
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum CostCategory {
+  MATERIALS
+  LABOR
+  EQUIPMENT
+  SUBCONTRACTOR
+  OVERHEAD
+  PERMITS
+  OTHER
+}
+
+enum ChecklistStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum LogType {
+  GENERAL
+  PROGRESS
+  SAFETY
+  WEATHER
+  DELAY
+  INSPECTION
+}
+
+// ─── Core Models ─────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(MANAGER)
+  active    Boolean  @default(true)
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+  projects  Project[]
+  logs      DailyLog[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Company {
+  id      String  @id @default(cuid())
+  name    String
+  address String?
+  phone   String?
+  users   User[]
+  projects Project[]
+  createdAt DateTime @default(now())
+
+  @@map("companies")
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(PLANNING)
+  location    String
+  budget      Float         @default(0)
+  startDate   DateTime
+  endDate     DateTime?
+  ownerId     String
+  owner       User          @relation(fields: [ownerId], references: [id])
+  companyId   String?
+  company     Company?      @relation(fields: [companyId], references: [id])
+  costs       Cost[]
+  logs        DailyLog[]
+  checklists  SafetyChecklist[]
+  documents   Document[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([ownerId])
+  @@index([status])
+  @@map("projects")
+}
+
+model Cost {
+  id          String       @id @default(cuid())
+  category    CostCategory
+  description String
+  amount      Float
+  quantity    Float        @default(1)
+  unit        String?
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  aiEstimated Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([projectId])
+  @@index([category])
+  @@map("costs")
+}
+
+model DailyLog {
+  id        String    @id @default(cuid())
+  type      LogType   @default(GENERAL)
+  content   String
+  summary   String?   // AI-generated summary (Phase 2)
+  weather   String?
+  crewSize  Int?
+  temperature Float?
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("daily_logs")
+}
+
+model SafetyChecklist {
+  id       String          @id @default(cuid())
+  name     String
+  items    Json            // [{ id, text, checked, category, notes }]
+  status   ChecklistStatus @default(PENDING)
+  projectId String
+  project  Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  aiNotes  String?         // AI-generated safety insights (Phase 2)
+  dueDate  DateTime?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([projectId])
+  @@map("safety_checklists")
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  type      String   // MIME type
+  size      Int      // bytes
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedAt DateTime @default(now())
+
+  @@index([projectId])
+  @@map("documents")
+}
