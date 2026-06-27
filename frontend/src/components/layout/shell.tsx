@@ -9,42 +9,39 @@ import { useAuth } from "@/hooks/use-auth";
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const [ready, setReady] = useState(false);
 
+  // Wait for client-side mount
   useEffect(() => {
-    setMounted(true);
+    setReady(true);
   }, []);
 
+  // Redirect to login if not authenticated (only after mount)
   useEffect(() => {
-    if (mounted && !isLoading && !user) {
+    if (ready && !isLoading && !user) {
       router.push("/login");
     }
-  }, [user, isLoading, router, mounted]);
+  }, [user, isLoading, router, ready]);
 
-  // Prevent flash during SSR and initial mount
-  if (!mounted || isLoading) {
+  // Show loading state during SSR and initial mount
+  if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
 
-  // Don't render dashboard content if not authenticated
-  if (!user) {
+  // If not authenticated, show nothing (will redirect)
+  if (!isLoading && !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Redirecting to login...</p>
-        </div>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
 
+  // Authenticated — show dashboard
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
