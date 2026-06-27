@@ -17,15 +17,24 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (mounted && !isLoading && !user) {
-      window.location.href = "/login";
+      router.push("/login");
     }
   }, [user, isLoading, router, mounted]);
 
-  // Always render the shell on server side to avoid 404
-  // Client-side will redirect if no auth
-  const showContent = !mounted || isLoading || user;
+  // Prevent flash during SSR and initial mount
+  if (!mounted || isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  if (!showContent) {
+  // Don't render dashboard content if not authenticated
+  if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
